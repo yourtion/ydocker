@@ -6,7 +6,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	"ydocker/container"
+	"github.com/yourtion/ydocker/cgroups/subsystems"
+	"github.com/yourtion/ydocker/container"
 )
 
 // 这里定义了 runCommand 的 Flags，其作用类似于运行命令时使用 一 来指定参数
@@ -17,7 +18,19 @@ var runCommand = cli.Command{
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "ti",
-			Usage: `打开 tty`,
+			Usage: "enable tty",
+		},
+		cli.StringFlag{
+			Name:  "m",
+			Usage: "memory limit",
+		},
+		cli.StringFlag{
+			Name:  "cpushare",
+			Usage: "cpushare limit",
+		},
+		cli.StringFlag{
+			Name:  "cpuset",
+			Usage: "cpuset limit",
 		},
 	},
 	Action: runAction,
@@ -33,9 +46,17 @@ func runAction(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		return fmt.Errorf("缺少 container 参数")
 	}
-	cmd := ctx.Args().Get(0)
+	var cmdArray []string
+	for _, arg := range ctx.Args() {
+		cmdArray = append(cmdArray, arg)
+	}
 	tty := ctx.Bool("ti")
-	Run(tty, cmd)
+	resConf := &subsystems.ResourceConfig{
+		MemoryLimit: ctx.String("m"),
+		CpuSet:      ctx.String("cpuset"),
+		CpuShare:    ctx.String("cpushare"),
+	}
+	Run(tty, cmdArray, resConf)
 	return nil
 }
 
@@ -55,6 +76,6 @@ func initAction(ctx *cli.Context) error {
 	log.Infof("init come on")
 	cmd := ctx.Args().Get(0)
 	log.Infof("command %s", cmd)
-	err := container.RunContainerInitProcess(cmd, nil)
+	err := container.RunContainerInitProcess()
 	return err
 }

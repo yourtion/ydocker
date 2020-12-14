@@ -4,6 +4,8 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 /*
@@ -13,9 +15,13 @@ import (
 	3. 下面的 clone 参数就是去 fork 出来一个新进程，并且使用了 namespace 隔离新创建的进程和外部环境
 	4. 如果用户指定了 -ti 参数，就需要把当前进程的输入输出导入到标准输入输出上
 */
-func NewParentProcess(tty bool, command string) *exec.Cmd {
-	args := []string{"init", command}
-	cmd := exec.Command("/proc/self/exe", args...)
+func NewParentProcess(tty bool) (*exec.Cmd, *os.File) {
+	readPipe, writePipe, err := newPipe()
+	if err != nil {
+		log.Errorf("New pipe error %v", err)
+		return nil, nil
+	}
+	cmd := exec.Command("/proc/self/exe", "init")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC,
 	}
@@ -24,5 +30,14 @@ func NewParentProcess(tty bool, command string) *exec.Cmd {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
-	return cmd
+	cmd.ExtraFiles = []*os.File{readPipe}
+	return cmd, writePipe
+}
+
+func newPipe() (*os.File, *os.File, error) {
+	read, write, err := os.Pipe()
+	if err != nil {
+		return nil, nil, err
+	}
+	return read, write, nil
 }
