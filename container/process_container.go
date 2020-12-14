@@ -30,11 +30,14 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
+	// 使用了 command 的 cmd.ExtraFiles 方法。这个属性的意思是会外带着这个文件句柄去创建子进程
 	cmd.ExtraFiles = []*os.File{readPipe}
 	return cmd, writePipe
 }
 
+// 使用 Go 提供的 pipe 方法生成一个匿名管道
 func newPipe() (*os.File, *os.File, error) {
+	// 返回两个变量，一个是读一个是写，其类型都是文件类型
 	read, write, err := os.Pipe()
 	if err != nil {
 		return nil, nil, err

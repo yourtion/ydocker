@@ -25,7 +25,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
 		log.Error(err)
 	}
 	// 创建 cgroup manager，并通过调用 set 和 apply 设置资源限制并使限制在容器上生效
-	cgroupManager := cgroups.NewCgroupManager("ydocker-cgroup")
+	cgroupManager := cgroups.NewCgroupManager("ydocker-cgroup1")
 	defer cgroupManager.Destroy()
 	// 设置资源限制
 	if err := cgroupManager.Set(res); err != nil {
@@ -36,7 +36,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
 		log.Error(err)
 	}
 
-	// 对容器设置完限制之后 ， 初始化容器
+	// 发送用户命令
 	sendInitCommand(comArray, writePipe)
 	if err := parent.Wait(); err != nil {
 		log.Error(err)

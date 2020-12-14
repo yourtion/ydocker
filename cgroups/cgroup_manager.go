@@ -25,7 +25,7 @@ func NewCgroupManager(path string) *CgroupManager {
 func (c *CgroupManager) Apply(pid int) error {
 	for _, subSysIns := range subsystems.SubsystemsIns {
 		if err := subSysIns.Apply(c.Path, pid); err != nil {
-			return err
+			logrus.Errorf("Apply cgroup fail %v", err)
 		}
 	}
 	return nil
@@ -35,7 +35,7 @@ func (c *CgroupManager) Apply(pid int) error {
 func (c *CgroupManager) Set(res *subsystems.ResourceConfig) error {
 	for _, subSysIns := range subsystems.SubsystemsIns {
 		if err := subSysIns.Set(c.Path, res); err != nil {
-			return err
+			logrus.Errorf("Set cgroup fail %v", err)
 		}
 	}
 	return nil
