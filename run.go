@@ -41,6 +41,9 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
 	if err := parent.Wait(); err != nil {
 		log.Error(err)
 	}
+	mntURL := "/root/mnt/"
+	rootURL := "/root/"
+	container.DeleteWorkSpace(rootURL, mntURL)
 	os.Exit(0)
 }
 
