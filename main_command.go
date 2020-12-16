@@ -14,7 +14,7 @@ import (
 var runCommand = cli.Command{
 	Name: "run",
 	Usage: `创建一个包含 namespace 和 cgroups 限制的容器 
-			ydocker run -ti [command ]`,
+			ydocker run -ti [command]`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "ti",
@@ -31,6 +31,11 @@ var runCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "cpuset",
 			Usage: "cpuset limit",
+		},
+		// 添加 -v 标签
+		cli.StringFlag{
+			Name:  "v",
+			Usage: "volume",
 		},
 	},
 	Action: runAction,
@@ -56,7 +61,9 @@ func runAction(ctx *cli.Context) error {
 		CpuSet:      ctx.String("cpuset"),
 		CpuShare:    ctx.String("cpushare"),
 	}
-	Run(tty, cmdArray, resConf)
+	// 把 volume 参数传给 Run 函数
+	volume := ctx.String("v")
+	Run(tty, cmdArray, resConf, volume)
 	return nil
 }
 
