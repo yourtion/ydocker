@@ -25,4 +25,4 @@ jobs:
 #       run: go test $(go list ./... | grep -v /demo/)
       
     - name: Build
-      run: go build -v ./...
+      run: go build
