@@ -30,7 +30,7 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
-	// 使用了 command 的 cmd.ExtraFiles 方法。这个属性的意思是会外带着这个文件句柄去创建子进程
+	// 使用了 commands 的 cmd.ExtraFiles 方法。这个属性的意思是会外带着这个文件句柄去创建子进程
 	cmd.ExtraFiles = []*os.File{readPipe}
 	mntURL := "/root/mnt/"
 	rootURL := "/root/"

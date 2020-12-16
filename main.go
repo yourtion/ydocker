@@ -5,6 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/yourtion/ydocker/commands"
 )
 
 const usage = `ydocker is a simple container runtime implementation.
@@ -15,10 +17,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "ydocker"
 	app.Usage = usage
-	app.Commands = []cli.Command{
-		initCommand,
-		runCommand,
-	}
+	app.Commands = commands.GetCommandList()
 
 	//  app.Before 内初始化一下 logrus 的日志配置
 	app.Before = func(ctx *cli.Context) error {

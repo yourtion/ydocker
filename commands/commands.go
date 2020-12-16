@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	"fmt"
@@ -10,11 +10,19 @@ import (
 	"github.com/yourtion/ydocker/container"
 )
 
+func GetCommandList() []cli.Command {
+	return []cli.Command{
+		initCommand,
+		runCommand,
+		commitCommand,
+	}
+}
+
 // 这里定义了 runCommand 的 Flags，其作用类似于运行命令时使用 一 来指定参数
 var runCommand = cli.Command{
 	Name: "run",
 	Usage: `创建一个包含 namespace 和 cgroups 限制的容器 
-			ydocker run -ti [command]`,
+			ydocker run -ti [commands]`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "ti",
@@ -43,8 +51,8 @@ var runCommand = cli.Command{
 
 /*
 这里是 run 命令执行的真正函数。
-	1. 判断参数是否包含 command
-	2. 获取用户指定的 command
+	1. 判断参数是否包含 commands
+	2. 获取用户指定的 commands
 	3. 调用 Run function 去准备启动容器
 */
 func runAction(ctx *cli.Context) error {
@@ -63,7 +71,7 @@ func runAction(ctx *cli.Context) error {
 	}
 	// 把 volume 参数传给 Run 函数
 	volume := ctx.String("v")
-	Run(tty, cmdArray, resConf, volume)
+	run(tty, cmdArray, resConf, volume)
 	return nil
 }
 
@@ -76,13 +84,26 @@ var initCommand = cli.Command{
 
 /*
 init 实际操作
-	1. 获取传递过来的 command 参数
+	1. 获取传递过来的 commands 参数
 	2. 执行容器初始化操作
 */
 func initAction(ctx *cli.Context) error {
 	log.Infof("init come on")
 	cmd := ctx.Args().Get(0)
-	log.Infof("command %s", cmd)
+	log.Infof("commands %s", cmd)
 	err := container.RunContainerInitProcess()
 	return err
+}
+
+var commitCommand = cli.Command{
+	Name:  "commit",
+	Usage: "commit a container into image",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		imageName := context.Args().Get(0)
+		commitContainer(imageName)
+		return nil
+	},
 }

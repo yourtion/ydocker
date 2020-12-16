@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	"os"
@@ -12,10 +12,10 @@ import (
 )
 
 /*
-这里的 Start 方法是真正开始前面创建好的 command 的调用，它首先会 clone 出来一个 namespace 隔离的进程，
+这里的 Start 方法是真正开始前面创建好的 commands 的调用，它首先会 clone 出来一个 namespace 隔离的进程，
 然后在子进程中，调用 /proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源。
 */
-func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume string) {
+func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume string) {
 	parent, writePipe := container.NewParentProcess(tty, volume)
 	if parent == nil {
 		log.Errorf("New parent process error")
@@ -49,7 +49,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 
 func sendInitCommand(comArray []string, writePipe *os.File) {
 	command := strings.Join(comArray, " ")
-	log.Infof(`command all is "%s"`, command)
+	log.Infof(`commands all is "%s"`, command)
 	if _, err := writePipe.WriteString(command); err != nil {
 		log.Error(err)
 	}
