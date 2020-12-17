@@ -23,7 +23,7 @@ func listContainers() {
 		return
 	}
 	// 遍历该文件夹下的所有文件
-	var containers []*container.ContainerInfo
+	var containers []*container.Info
 	for _, file := range files {
 		// 根据容器配置文件获取对应的信息，然后转换成容器信息的对象
 		tmpContainer, err := getContainerInfo(file)
@@ -53,7 +53,7 @@ func listContainers() {
 	}
 }
 
-func getContainerInfo(file os.FileInfo) (*container.ContainerInfo, error) {
+func getContainerInfo(file os.FileInfo) (*container.Info, error) {
 	// 获取文件名
 	containerName := file.Name()
 	// 根据文件名生成文件绝对路径
@@ -66,7 +66,7 @@ func getContainerInfo(file os.FileInfo) (*container.ContainerInfo, error) {
 		return nil, err
 	}
 	// 将 json 文件信息反序列化成容器信息对象
-	var containerInfo container.ContainerInfo
+	var containerInfo container.Info
 	if err := json.Unmarshal(content, &containerInfo); err != nil {
 		log.Errorf("Json unmarshal error %v", err)
 		return nil, err

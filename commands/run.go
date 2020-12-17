@@ -21,7 +21,7 @@ import (
 然后在子进程中，调用 /proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源。
 */
 func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume string, name string) {
-	parent, writePipe := container.NewParentProcess(tty, volume)
+	parent, writePipe := container.NewParentProcess(tty, volume, name)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -98,7 +98,7 @@ func recordContainerInfo(containerPID int, commandArray []string, containerName 
 		containerName = id
 	}
 	// 生成容器信息的结构体实例
-	containerInfo := &container.ContainerInfo{
+	containerInfo := &container.Info{
 		Id:          id,
 		Pid:         strconv.Itoa(containerPID),
 		Command:     command,

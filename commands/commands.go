@@ -16,6 +16,7 @@ func GetCommandList() []cli.Command {
 		runCommand,
 		commitCommand,
 		listCommand,
+		logCommand,
 	}
 }
 
@@ -129,6 +130,19 @@ var listCommand = cli.Command{
 	Usage: "list all the containers",
 	Action: func(context *cli.Context) error {
 		listContainers()
+		return nil
+	},
+}
+
+var logCommand = cli.Command{
+	Name:  "logs",
+	Usage: "print logs of a container",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("please input your container name")
+		}
+		containerName := context.Args().Get(0)
+		logContainer(containerName)
 		return nil
 	},
 }
