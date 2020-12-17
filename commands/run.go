@@ -38,13 +38,16 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 
 	// 发送用户命令
 	sendInitCommand(comArray, writePipe)
-	if err := parent.Wait(); err != nil {
-		log.Error(err)
+	if tty {
+		if err := parent.Wait(); err != nil {
+			log.Error(err)
+		}
+		// TODO: Detach DeleteWorkSpace
+		mntURL := "/root/mnt/"
+		rootURL := "/root/"
+		container.DeleteWorkSpace(rootURL, mntURL, volume)
+		os.Exit(0)
 	}
-	mntURL := "/root/mnt/"
-	rootURL := "/root/"
-	container.DeleteWorkSpace(rootURL, mntURL, volume)
-	os.Exit(0)
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {

@@ -28,6 +28,10 @@ var runCommand = cli.Command{
 			Name:  "ti",
 			Usage: "enable tty",
 		},
+		cli.BoolFlag{
+			Name:  "d",
+			Usage: "detach container",
+		},
 		cli.StringFlag{
 			Name:  "m",
 			Usage: "memory limit",
@@ -64,6 +68,10 @@ func runAction(ctx *cli.Context) error {
 		cmdArray = append(cmdArray, arg)
 	}
 	tty := ctx.Bool("ti")
+	detach := ctx.Bool("d")
+	if tty && detach {
+		return fmt.Errorf("ti and d paramter can not both provided")
+	}
 	resConf := &subsystems.ResourceConfig{
 		MemoryLimit: ctx.String("m"),
 		CpuSet:      ctx.String("cpuset"),
