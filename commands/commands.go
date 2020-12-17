@@ -15,6 +15,7 @@ func GetCommandList() []cli.Command {
 		initCommand,
 		runCommand,
 		commitCommand,
+		listCommand,
 	}
 }
 
@@ -49,6 +50,11 @@ var runCommand = cli.Command{
 			Name:  "v",
 			Usage: "volume",
 		},
+		// 提供 run 后面的 -name 指定容器名字参数
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "container name",
+		},
 	},
 	Action: runAction,
 }
@@ -79,7 +85,9 @@ func runAction(ctx *cli.Context) error {
 	}
 	// 把 volume 参数传给 Run 函数
 	volume := ctx.String("v")
-	run(tty, cmdArray, resConf, volume)
+	// 将取到的容器名称传递下去，如果没有则取到的值为空
+	containerName := ctx.String("name")
+	run(tty, cmdArray, resConf, volume, containerName)
 	return nil
 }
 
@@ -112,6 +120,15 @@ var commitCommand = cli.Command{
 		}
 		imageName := context.Args().Get(0)
 		commitContainer(imageName)
+		return nil
+	},
+}
+
+var listCommand = cli.Command{
+	Name:  "ps",
+	Usage: "list all the containers",
+	Action: func(context *cli.Context) error {
+		listContainers()
 		return nil
 	},
 }
