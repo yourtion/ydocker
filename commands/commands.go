@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -17,6 +18,7 @@ func GetCommandList() []cli.Command {
 		commitCommand,
 		listCommand,
 		logCommand,
+		execCommand,
 	}
 }
 
@@ -143,6 +145,31 @@ var logCommand = cli.Command{
 		}
 		containerName := context.Args().Get(0)
 		logContainer(containerName)
+		return nil
+	},
+}
+
+var execCommand = cli.Command{
+	Name:  "exec",
+	Usage: "exec a command into container",
+	Action: func(context *cli.Context) error {
+		// This is for callback
+		if os.Getenv(EnvExecPid) != "" {
+			log.Infof("pid callback pid %s", os.Getgid())
+			return nil
+		}
+		// 我们希望命令格式是 ydocker exec 容器名命令
+		if len(context.Args()) < 2 {
+			return fmt.Errorf("missing container name or command")
+		}
+		containerName := context.Args().Get(0)
+		// 将除了容器名之外的参数当作需要执行的命令处理
+		var commandArray []string
+		for _, arg := range context.Args().Tail() {
+			commandArray = append(commandArray, arg)
+		}
+		// 执行命令
+		execContainer(containerName, commandArray)
 		return nil
 	},
 }

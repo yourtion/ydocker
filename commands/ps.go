@@ -25,8 +25,10 @@ func listContainers() {
 	// 遍历该文件夹下的所有文件
 	var containers []*container.Info
 	for _, file := range files {
+		// 获取文件名
+		containerName := file.Name()
 		// 根据容器配置文件获取对应的信息，然后转换成容器信息的对象
-		tmpContainer, err := getContainerInfo(file)
+		tmpContainer, err := getContainerInfo(containerName)
 		if err != nil {
 			log.Errorf("Get container info error %v", err)
 			continue
@@ -53,9 +55,7 @@ func listContainers() {
 	}
 }
 
-func getContainerInfo(file os.FileInfo) (*container.Info, error) {
-	// 获取文件名
-	containerName := file.Name()
+func getContainerInfo(containerName string) (*container.Info, error) {
 	// 根据文件名生成文件绝对路径
 	configFileDir := fmt.Sprintf(container.DefaultInfoLocation, containerName)
 	configFileDir = configFileDir + container.ConfigName
