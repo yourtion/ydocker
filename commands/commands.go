@@ -19,6 +19,7 @@ func GetCommandList() []cli.Command {
 		listCommand,
 		logCommand,
 		execCommand,
+		stopCommand,
 	}
 }
 
@@ -96,22 +97,15 @@ func runAction(ctx *cli.Context) error {
 
 // 这里，定义了 initCommand 的具体操作，此操作为内部方法，禁止外部调用
 var initCommand = cli.Command{
-	Name:   "init",
-	Usage:  `初始化容器进程并执行用户进程（禁止外部调用）`,
-	Action: initAction,
-}
-
-/*
-init 实际操作
-	1. 获取传递过来的 commands 参数
-	2. 执行容器初始化操作
-*/
-func initAction(ctx *cli.Context) error {
-	log.Infof("init come on")
-	cmd := ctx.Args().Get(0)
-	log.Infof("commands %s", cmd)
-	err := container.RunContainerInitProcess()
-	return err
+	Name:  "init",
+	Usage: `初始化容器进程并执行用户进程（禁止外部调用）`,
+	Action: func(ctx *cli.Context) error {
+		log.Infof("init come on")
+		cmd := ctx.Args().Get(0)
+		log.Infof("commands %s", cmd)
+		err := container.RunContainerInitProcess()
+		return err
+	},
 }
 
 var commitCommand = cli.Command{
@@ -170,6 +164,19 @@ var execCommand = cli.Command{
 		}
 		// 执行命令
 		execContainer(containerName, commandArray)
+		return nil
+	},
+}
+
+var stopCommand = cli.Command{
+	Name:  "stop",
+	Usage: "stop a container",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		containerName := context.Args().Get(0)
+		stopContainer(containerName)
 		return nil
 	},
 }

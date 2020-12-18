@@ -1,9 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -39,7 +37,7 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 
 	// 创建 cgroup manager，并通过调用 set 和 apply 设置资源限制并使限制在容器上生效
 	cgroupManager := cgroups.NewCgroupManager("ydocker-cgroup")
-	defer cgroupManager.Destroy()
+	defer func() { _ = cgroupManager.Destroy() }()
 	// 设置资源限制
 	if err := cgroupManager.Set(res); err != nil {
 		log.Error(err)
@@ -75,17 +73,6 @@ func sendInitCommand(comArray []string, writePipe *os.File) {
 	}
 }
 
-// 生成随机字符串
-func randStringBytes(n int) string {
-	letterBytes := "1234567890"
-	rand.Seed(time.Now().UnixNano())
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
 // 记录容器信息
 func recordContainerInfo(containerPID int, commandArray []string, containerName string) (string, error) {
 	// 首先生成 10 位数字的容器 ID
@@ -107,14 +94,6 @@ func recordContainerInfo(containerPID int, commandArray []string, containerName 
 		Name:        containerName,
 	}
 
-	// 将容器信息的对象 json 序列化成字符串
-	jsonBytes, err := json.Marshal(containerInfo)
-	if err != nil {
-		log.Errorf("Record container info error %v", err)
-		return "", err
-	}
-	jsonStr := string(jsonBytes)
-
 	// 拼凑存储容器信息的路径
 	dirUrl := fmt.Sprintf(container.DefaultInfoLocation, containerName)
 	// 如果该路径不存在，就级联地全部创建
@@ -122,27 +101,8 @@ func recordContainerInfo(containerPID int, commandArray []string, containerName 
 		log.Errorf("Mkdir error %s error %v", dirUrl, err)
 		return "", err
 	}
-	fileName := dirUrl + "/" + container.ConfigName
-	// 创建位终的配置文件 config.json 文件
-	file, err := os.Create(fileName)
-	defer file.Close()
-	if err != nil {
-		log.Errorf("Create file %s error %v", fileName, err)
+	if err := writeContainerInfoByName(containerName, containerInfo); err != nil {
 		return "", err
 	}
-	// 将 json 化之后的数据写入到文件中
-	if _, err := file.WriteString(jsonStr); err != nil {
-		log.Errorf("File write string error %v", err)
-		return "", err
-	}
-
 	return containerName, nil
-}
-
-// 删除容器信息
-func deleteContainerInfo(containerId string) {
-	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerId)
-	if err := os.RemoveAll(dirURL); err != nil {
-		log.Errorf("Remove dir %s error %v", dirURL, err)
-	}
 }

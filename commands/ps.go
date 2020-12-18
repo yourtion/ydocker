@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,7 +27,7 @@ func listContainers() {
 		// 获取文件名
 		containerName := file.Name()
 		// 根据容器配置文件获取对应的信息，然后转换成容器信息的对象
-		tmpContainer, err := getContainerInfo(containerName)
+		tmpContainer, err := getContainerInfoByName(containerName)
 		if err != nil {
 			log.Errorf("Get container info error %v", err)
 			continue
@@ -53,24 +52,4 @@ func listContainers() {
 		log.Errorf("Flush error %v", err)
 		return
 	}
-}
-
-func getContainerInfo(containerName string) (*container.Info, error) {
-	// 根据文件名生成文件绝对路径
-	configFileDir := fmt.Sprintf(container.DefaultInfoLocation, containerName)
-	configFileDir = configFileDir + container.ConfigName
-	// 读取 config.json 文件内的容器信息
-	content, err := ioutil.ReadFile(configFileDir)
-	if err != nil {
-		log.Errorf("Read file %s error %v", configFileDir, err)
-		return nil, err
-	}
-	// 将 json 文件信息反序列化成容器信息对象
-	var containerInfo container.Info
-	if err := json.Unmarshal(content, &containerInfo); err != nil {
-		log.Errorf("Json unmarshal error %v", err)
-		return nil, err
-	}
-
-	return &containerInfo, nil
 }

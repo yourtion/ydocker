@@ -43,12 +43,3 @@ func execContainer(containerName string, comArray []string) {
 		log.Errorf("Exec container %s error %v", containerName, err)
 	}
 }
-
-// 根据提供的容器名获取对应容器的 PIO
-func getContainerPidByName(containerName string) (string, error) {
-	containerInfo, err := getContainerInfo(containerName)
-	if err != nil {
-		return "", err
-	}
-	return containerInfo.Pid, nil
-}
