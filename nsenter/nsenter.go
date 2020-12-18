@@ -1,6 +1,7 @@
 package nsenter
 
 /*
+#cgo CFLAGS: -Wno-implicit-function-declaration
 #include <errno.h>
 #include <sched.h>
 #include <stdio.h>

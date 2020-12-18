@@ -20,6 +20,7 @@ func GetCommandList() []cli.Command {
 		logCommand,
 		execCommand,
 		stopCommand,
+		removeCommand,
 	}
 }
 
@@ -177,6 +178,19 @@ var stopCommand = cli.Command{
 		}
 		containerName := context.Args().Get(0)
 		stopContainer(containerName)
+		return nil
+	},
+}
+
+var removeCommand = cli.Command{
+	Name:  "rm",
+	Usage: "remove unused containers",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		containerName := context.Args().Get(0)
+		removeContainer(containerName)
 		return nil
 	},
 }
