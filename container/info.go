@@ -10,6 +10,7 @@ var (
 	RootUrl             = "/root"
 	MntUrl              = "/root/mnt/%s"
 	WriteLayerUrl       = "/root/writeLayer/%s"
+	CGroupName          = "ydocker-cgroup"
 )
 
 type Info struct {

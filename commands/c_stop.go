@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/yourtion/ydocker/cgroups"
 	"github.com/yourtion/ydocker/container"
 )
 
@@ -32,7 +33,8 @@ func stopContainer(containerName string) {
 	}
 	// 容器进程已经被 kill， 所以下面需要修改容器状态，PID 可以直为空
 	containerInfo.Status = container.STOP
-	containerInfo.Pid = " "
+	containerInfo.Pid = ""
 	// 将修改后的信息序列化成 json 的字符串
 	_ = writeContainerInfoByName(containerName, containerInfo)
+	_ = cgroups.NewCgroupManager(container.CGroupName).Destroy()
 }

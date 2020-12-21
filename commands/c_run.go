@@ -40,8 +40,7 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerN
 	}
 
 	// 创建 cgroup manager，并通过调用 set 和 apply 设置资源限制并使限制在容器上生效
-	cgroupManager := cgroups.NewCgroupManager("ydocker-cgroup")
-	defer func() { _ = cgroupManager.Destroy() }()
+	cgroupManager := cgroups.NewCgroupManager(container.CGroupName)
 	// 设置资源限制
 	if err := cgroupManager.Set(res); err != nil {
 		log.Error(err)
@@ -59,6 +58,7 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerN
 		}
 		deleteContainerInfo(containerName)
 		container.DeleteWorkSpace(volume, containerName)
+		_ = cgroupManager.Destroy()
 		os.Exit(0)
 	}
 }
