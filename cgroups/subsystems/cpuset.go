@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type CpusetSubSystem struct {
@@ -13,11 +15,17 @@ type CpusetSubSystem struct {
 
 func (s *CpusetSubSystem) Set(cgroupPath string, res *ResourceConfig) error {
 	subsystemCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, true)
-	if err != nil || res.CpuSet == "" {
+	if err != nil {
 		return err
+	}
+	if res.CpuSet == "" {
+		res.CpuSet = "0"
 	}
 	if err := ioutil.WriteFile(path.Join(subsystemCgroupPath, "cpuset.cpus"), []byte(res.CpuSet), 0644); err != nil {
 		return fmt.Errorf("set cgroup cpuset fail %v", err)
+	}
+	if err := ioutil.WriteFile(path.Join(subsystemCgroupPath, "cpuset.mems"), []byte("0"), 0644); err != nil {
+		log.Errorf("set cgroup cpuset.mems fail %v", err)
 	}
 	return nil
 }

@@ -150,7 +150,7 @@ var execCommand = cli.Command{
 	Action: func(context *cli.Context) error {
 		// This is for callback
 		if os.Getenv(EnvExecPid) != "" {
-			log.Infof("pid callback pid %s", os.Getgid())
+			log.Infof("pid callback pid %d", os.Getgid())
 			return nil
 		}
 		// 我们希望命令格式是 ydocker exec 容器名命令

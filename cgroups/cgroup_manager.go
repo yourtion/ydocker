@@ -23,7 +23,7 @@ func NewCgroupManager(path string) *CgroupManager {
 
 // 将进程 pid 加入到这个 cgroup 中
 func (c *CgroupManager) Apply(pid int) error {
-	for _, subSysIns := range subsystems.SubsystemsIns {
+	for _, subSysIns := range subsystems.Instance {
 		if err := subSysIns.Apply(c.Path, pid); err != nil {
 			logrus.Errorf("Apply cgroup fail %v", err)
 		}
@@ -33,7 +33,7 @@ func (c *CgroupManager) Apply(pid int) error {
 
 // 设置 cgroup 资源限制
 func (c *CgroupManager) Set(res *subsystems.ResourceConfig) error {
-	for _, subSysIns := range subsystems.SubsystemsIns {
+	for _, subSysIns := range subsystems.Instance {
 		if err := subSysIns.Set(c.Path, res); err != nil {
 			logrus.Errorf("Set cgroup fail %v", err)
 		}
@@ -43,7 +43,7 @@ func (c *CgroupManager) Set(res *subsystems.ResourceConfig) error {
 
 // 释放 cgroup
 func (c *CgroupManager) Destroy() error {
-	for _, subSysIns := range subsystems.SubsystemsIns {
+	for _, subSysIns := range subsystems.Instance {
 		if err := subSysIns.Remove(c.Path); err != nil {
 			logrus.Warnf("remove cgroup fail %v", err)
 		}

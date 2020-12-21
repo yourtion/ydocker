@@ -6,7 +6,7 @@ var (
 	Exit                = "exited"
 	DefaultInfoLocation = "/var/run/ydocker/%s/"
 	ConfigName          = "config.json"
-	ContainerLogFile    = "container.log"
+	LogFile             = "container.log"
 )
 
 type Info struct {

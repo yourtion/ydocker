@@ -13,10 +13,14 @@ import (
 func logContainer(containerName string) {
 	// 找到对应文件夹的位置
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerName)
-	logFileLocation := dirURL + container.ContainerLogFile
+	logFileLocation := dirURL + container.LogFile
 	// 打开日志文件
 	file, err := os.Open(logFileLocation)
-	defer file.Close()
+	defer func() {
+		if file != nil {
+			_ = file.Close()
+		}
+	}()
 	if err != nil {
 		log.Errorf("Log container open file %s error %v", logFileLocation, err)
 		return

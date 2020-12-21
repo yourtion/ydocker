@@ -24,7 +24,7 @@ type Subsystem interface {
 }
 
 // 通过不同的 Subsystem 初始化实例创建资源限制处理链数组
-var SubsystemsIns = []Subsystem{
+var Instance = []Subsystem{
 	&CpusetSubSystem{},
 	&MemorySubSystem{},
 	&CpuSubSystem{},
