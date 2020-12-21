@@ -78,6 +78,11 @@ func runAction(ctx *cli.Context) error {
 	for _, arg := range ctx.Args() {
 		cmdArray = append(cmdArray, arg)
 	}
+	if cmdArray == nil || len(cmdArray) < 2 {
+		return fmt.Errorf("缺少 image 参数")
+	}
+	imageName := cmdArray[0]
+	cmdArray = cmdArray[1:]
 	tty := ctx.Bool("ti")
 	detach := ctx.Bool("d")
 	if tty && detach {
@@ -92,7 +97,7 @@ func runAction(ctx *cli.Context) error {
 	volume := ctx.String("v")
 	// 将取到的容器名称传递下去，如果没有则取到的值为空
 	containerName := ctx.String("name")
-	run(tty, cmdArray, resConf, volume, containerName)
+	run(tty, cmdArray, resConf, containerName, volume, imageName)
 	return nil
 }
 
@@ -113,11 +118,12 @@ var commitCommand = cli.Command{
 	Name:  "commit",
 	Usage: "commit a container into image",
 	Action: func(context *cli.Context) error {
-		if len(context.Args()) < 1 {
-			return fmt.Errorf("missing container name")
+		if len(context.Args()) < 2 {
+			return fmt.Errorf("missing container name and image name")
 		}
-		imageName := context.Args().Get(0)
-		commitContainer(imageName)
+		containerName := context.Args().Get(0)
+		imageName := context.Args().Get(1)
+		commitContainer(containerName, imageName)
 		return nil
 	},
 }

@@ -7,6 +7,9 @@ var (
 	DefaultInfoLocation = "/var/run/ydocker/%s/"
 	ConfigName          = "config.json"
 	LogFile             = "container.log"
+	RootUrl             = "/root"
+	MntUrl              = "/root/mnt/%s"
+	WriteLayerUrl       = "/root/writeLayer/%s"
 )
 
 type Info struct {
@@ -16,4 +19,5 @@ type Info struct {
 	Command     string `json:"command"`    // 容器内init运行命令
 	CreatedTime string `json:"createTime"` // 创建时间
 	Status      string `json:"status"`     // 容器的状态
+	Volume      string `json:"volume"`     // 容器的数据卷
 }

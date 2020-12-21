@@ -18,8 +18,13 @@ import (
 这里的 Start 方法是真正开始前面创建好的 commands 的调用，它首先会 clone 出来一个 namespace 隔离的进程，
 然后在子进程中，调用 /proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源。
 */
-func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume string, name string) {
-	parent, writePipe := container.NewParentProcess(tty, volume, name)
+func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerName, volume, imageName string) {
+	containerId := randStringBytes(10)
+	if containerName == "" {
+		containerName = containerId
+	}
+
+	parent, writePipe := container.NewParentProcess(tty, containerName, volume, imageName)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -29,8 +34,7 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 	}
 
 	// 记录容器信息
-	containerName, err := recordContainerInfo(parent.Process.Pid, comArray, name)
-	if err != nil {
+	if err := recordContainerInfo(parent.Process.Pid, comArray, containerName, containerId, volume); err != nil {
 		log.Errorf("Record container info error %v", err)
 		return
 	}
@@ -55,9 +59,7 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 		}
 		deleteContainerInfo(containerName)
 		// TODO: Detach DeleteWorkSpace
-		mntURL := "/root/mnt/"
-		rootURL := "/root/"
-		container.DeleteWorkSpace(rootURL, mntURL, volume)
+		container.DeleteWorkSpace(volume, containerName)
 		os.Exit(0)
 	}
 }
@@ -74,16 +76,9 @@ func sendInitCommand(comArray []string, writePipe *os.File) {
 }
 
 // 记录容器信息
-func recordContainerInfo(containerPID int, commandArray []string, containerName string) (string, error) {
-	// 首先生成 10 位数字的容器 ID
-	id := randStringBytes(10)
-	// 以当前时间为容器创建时间
+func recordContainerInfo(containerPID int, commandArray []string, containerName, id, volume string) error {
 	createTime := time.Now().Format("2006-01-02 15:04:05")
 	command := strings.Join(commandArray, "")
-	// 如果用户不指定容器名，那么就以容器 id 当作容器名
-	if containerName == "" {
-		containerName = id
-	}
 	// 生成容器信息的结构体实例
 	containerInfo := &container.Info{
 		Id:          id,
@@ -92,17 +87,17 @@ func recordContainerInfo(containerPID int, commandArray []string, containerName 
 		CreatedTime: createTime,
 		Status:      container.RUNNING,
 		Name:        containerName,
+		Volume:      volume,
 	}
-
 	// 拼凑存储容器信息的路径
 	dirUrl := fmt.Sprintf(container.DefaultInfoLocation, containerName)
 	// 如果该路径不存在，就级联地全部创建
 	if err := os.MkdirAll(dirUrl, 0622); err != nil {
 		log.Errorf("Mkdir error %s error %v", dirUrl, err)
-		return "", err
+		return err
 	}
 	if err := writeContainerInfoByName(containerName, containerInfo); err != nil {
-		return "", err
+		return err
 	}
-	return containerName, nil
+	return nil
 }

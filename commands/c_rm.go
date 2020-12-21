@@ -26,6 +26,6 @@ func removeContainer(containerName string) {
 	// 将所有信息包括子目录都移除
 	if err := os.RemoveAll(dirURL); err != nil {
 		log.Errorf("Remove file %s error %v", dirURL, err)
-		return
 	}
+	container.DeleteWorkSpace(containerInfo.Volume, containerName)
 }
