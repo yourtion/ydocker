@@ -18,13 +18,13 @@ import (
 这里的 Start 方法是真正开始前面创建好的 commands 的调用，它首先会 clone 出来一个 namespace 隔离的进程，
 然后在子进程中，调用 /proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源。
 */
-func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerName, volume, imageName string) {
+func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerName, volume, imageName string, envSlice []string) {
 	containerId := randStringBytes(10)
 	if containerName == "" {
 		containerName = containerId
 	}
 
-	parent, writePipe := container.NewParentProcess(tty, containerName, volume, imageName)
+	parent, writePipe := container.NewParentProcess(tty, containerName, volume, imageName, envSlice)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -58,7 +58,6 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerN
 			log.Error(err)
 		}
 		deleteContainerInfo(containerName)
-		// TODO: Detach DeleteWorkSpace
 		container.DeleteWorkSpace(volume, containerName)
 		os.Exit(0)
 	}

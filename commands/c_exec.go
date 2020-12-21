@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -39,7 +41,26 @@ func execContainer(containerName string, comArray []string) {
 		log.Errorf("Setenv EnvExecPid error %v", err)
 	}
 
+	// 获取对应的 PID 环境变量，其实也就是容器的环境变量
+	containerEnvs := getEnvsByPid(pid)
+	// 将宿主机的环境变量和容器的环境变量都放置到 exec 进程内
+	cmd.Env = append(os.Environ(), containerEnvs...)
+
 	if err := cmd.Run(); err != nil {
 		log.Errorf("Exec container %s error %v", containerName, err)
 	}
+}
+
+// 根据指定的 PID 来获取对应进程的环境变量
+func getEnvsByPid(pid string) []string {
+	// 迸程环境变量存放的位置是 /proc/PID/environ
+	path := fmt.Sprintf("/proc/%s/environ", pid)
+	contentBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Errorf("Read file %s error %v", path, err)
+		return nil
+	}
+	// 多个环境变量中的分隔符是 \u0000
+	envs := strings.Split(string(contentBytes), "\u0000")
+	return envs
 }

@@ -60,6 +60,10 @@ var runCommand = cli.Command{
 			Name:  "name",
 			Usage: "container name",
 		},
+		cli.StringSliceFlag{
+			Name:  "e",
+			Usage: "set environment",
+		},
 	},
 	Action: runAction,
 }
@@ -97,7 +101,8 @@ func runAction(ctx *cli.Context) error {
 	volume := ctx.String("v")
 	// 将取到的容器名称传递下去，如果没有则取到的值为空
 	containerName := ctx.String("name")
-	run(tty, cmdArray, resConf, containerName, volume, imageName)
+	envSlice := ctx.StringSlice("e")
+	run(tty, cmdArray, resConf, containerName, volume, imageName, envSlice)
 	return nil
 }
 
