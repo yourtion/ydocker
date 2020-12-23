@@ -21,6 +21,7 @@ func GetCommandList() []cli.Command {
 		execCommand,
 		stopCommand,
 		removeCommand,
+		networkCommand,
 	}
 }
 
@@ -64,6 +65,14 @@ var runCommand = cli.Command{
 			Name:  "e",
 			Usage: "set environment",
 		},
+		cli.StringFlag{
+			Name:  "net",
+			Usage: "container network",
+		},
+		cli.StringSliceFlag{
+			Name:  "p",
+			Usage: "port mapping",
+		},
 	},
 	Action: runAction,
 }
@@ -102,7 +111,9 @@ func runAction(ctx *cli.Context) error {
 	// 将取到的容器名称传递下去，如果没有则取到的值为空
 	containerName := ctx.String("name")
 	envSlice := ctx.StringSlice("e")
-	run(tty, cmdArray, resConf, containerName, volume, imageName, envSlice)
+	network := ctx.String("net")
+	portMapping := ctx.StringSlice("p")
+	run(tty, cmdArray, resConf, containerName, volume, imageName, envSlice, network, portMapping)
 	return nil
 }
 
@@ -204,4 +215,42 @@ var removeCommand = cli.Command{
 		removeContainer(containerName)
 		return nil
 	},
+}
+
+var networkCommand = cli.Command{
+	Name:  "network",
+	Usage: "container network commands",
+	Subcommands: []cli.Command{
+		createNetworkCommand,
+		listNetworkCommand,
+		removeNetworkCommand,
+	},
+}
+
+var createNetworkCommand = cli.Command{
+	Name:  "create",
+	Usage: "create a container network",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "driver",
+			Usage: "network driver",
+		},
+		cli.StringFlag{
+			Name:  "subnet",
+			Usage: "subnet cidr",
+		},
+	},
+	Action: createNetwork,
+}
+
+var listNetworkCommand = cli.Command{
+	Name:   "list",
+	Usage:  "list container network",
+	Action: listNetwork,
+}
+
+var removeNetworkCommand = cli.Command{
+	Name:   "remove",
+	Usage:  "remove container network",
+	Action: removeNetwork,
 }

@@ -12,13 +12,15 @@ import (
 	"github.com/yourtion/ydocker/cgroups"
 	"github.com/yourtion/ydocker/cgroups/subsystems"
 	"github.com/yourtion/ydocker/container"
+	"github.com/yourtion/ydocker/network"
 )
 
 /*
 这里的 Start 方法是真正开始前面创建好的 commands 的调用，它首先会 clone 出来一个 namespace 隔离的进程，
 然后在子进程中，调用 /proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源。
 */
-func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerName, volume, imageName string, envSlice []string) {
+func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerName, volume, imageName string,
+	envSlice []string, nw string, portMapping []string) {
 	containerId := randStringBytes(10)
 	if containerName == "" {
 		containerName = containerId
@@ -48,6 +50,23 @@ func run(tty bool, comArray []string, res *subsystems.ResourceConfig, containerN
 	// 将容器进程加入到各个 subsystem 挂载对应的 cgroup 中
 	if err := cgroupManager.Apply(parent.Process.Pid); err != nil {
 		log.Error(err)
+	}
+
+	if nw != "" {
+		// config container network
+		if err := network.Init(); err != nil {
+			log.Errorf("Error Init Network %v", err)
+		}
+		containerInfo := &container.Info{
+			Id:          containerId,
+			Pid:         strconv.Itoa(parent.Process.Pid),
+			Name:        containerName,
+			PortMapping: portMapping,
+		}
+		if err := network.Connect(nw, containerInfo); err != nil {
+			log.Errorf("Error Connect Network %v", err)
+			return
+		}
 	}
 
 	// 发送用户命令
