@@ -201,69 +201,100 @@ func DeleteNetwork(networkName string) error {
 	return nw.remove(defaultNetworkPath)
 }
 
-func enterContainerNetns(enLink *netlink.Link, cinfo *container.Info) func() {
-	f, err := os.OpenFile(fmt.Sprintf("/proc/%s/ns/net", cinfo.Pid), os.O_RDONLY, 0)
+// 将容器的网络端点加入到容器的网络空间中
+// 并锁定当前程序所执行的线程，使当前线程进入到容器的网络空间
+// 返回值是一个函数指针，执行这个返回函数才会退出容器的网络空间，回归到宿主机的网络空间
+func enterContainerNetns(enLink *netlink.Link, cInfo *container.Info) func() {
+	// 找到容器的 Net Namespace
+	// /proc/[pid]/ns/net 打开这个文件的文件描述符就可以来操作 Net Namespace
+	// 而 ContainerInfo 中的 PID，即容器在宿主机上映射的进程 ID
+	f, err := os.OpenFile(fmt.Sprintf("/proc/%s/ns/net", cInfo.Pid), os.O_RDONLY, 0)
 	if err != nil {
 		logrus.Errorf("error get container net namespace, %v", err)
 	}
-
+	// 取到文件的文件描述符
 	nsFD := f.Fd()
+	// 锁定当前程序所执行的线程，如果不锁定操作系统线程的话
+	// Go 语言的 goroutine 可能会被调度到别的线程上去，就不能保证一直在所需要的网络空间中了
+	// 所以调用 runtime.LockOSThread 时要先锁定当前程序执行的线程
 	runtime.LockOSThread()
 
-	// 修改 veth peer 另外一端移到容器的namespace中
+	// 修改网络端点 Veth 的另外一端，将其移动到容器的 Net Namespace 中
 	if err = netlink.LinkSetNsFd(*enLink, int(nsFD)); err != nil {
 		logrus.Errorf("error set link netns , %v", err)
 	}
 
-	// 获取当前的网络namespace
-	origns, err := netns.Get()
+	// 通过 netns.Get 方法获得当前网络的 Net Namespace
+	// 以便后面从容器的 Net Namespace 中退出，回到原本网络的 Net Namespace 中
+	origins, err := netns.Get()
 	if err != nil {
 		logrus.Errorf("error get current netns, %v", err)
 	}
-
 	// 设置当前进程到新的网络namespace，并在函数执行完成之后再恢复到之前的namespace
 	if err = netns.Set(netns.NsHandle(nsFD)); err != nil {
 		logrus.Errorf("error set netns, %v", err)
 	}
+	// 返回之前 Net Namespace 的函数
+	// 在容苦苦的网络空间中，执行完容器配置之后调用 此函数就可以将程序恢复到原生的 Net Namespace
 	return func() {
-		_ = netns.Set(origns)
-		_ = origns.Close()
+		// 恢复到上面获取到的之前的 Net Namespace
+		if err := netns.Set(origins); err != nil {
+			logrus.Errorf("netns error: %v", err)
+		}
+		// 关闭 Net Namespace 文件
+		if err := origins.Close(); err != nil {
+			logrus.Errorf("clonse Net Namespace error: %v", err)
+		}
+		// 取消对当附程序的线程锁定
 		runtime.UnlockOSThread()
-		_ = f.Close()
+		// 关闭 Namespace 文件
+		if err := f.Close(); err != nil {
+			logrus.Errorf("clonse Namespace error: %v", err)
+		}
 	}
 }
 
-func configEndpointIpAddressAndRoute(ep *Endpoint, cinfo *container.Info) error {
+// 配置容器网络端点的地址和路由
+func configEndpointIpAddressAndRoute(ep *Endpoint, cInfo *container.Info) error {
+	// 通过网络端点中 Veth 的另一端
 	peerLink, err := netlink.LinkByName(ep.Device.PeerName)
 	if err != nil {
 		return fmt.Errorf("fail config endpoint: %v", err)
 	}
-
-	defer enterContainerNetns(&peerLink, cinfo)()
-
+	// 将容器的网络端点加入到容器的网络空间中
+	// 并使这个函数下面的操作都在这个网络空间中进行
+	// 执行完函数后，恢复为默认的网络空间
+	defer enterContainerNetns(&peerLink, cInfo)()
+	// 获取到容器的 IP 地址及网段，用于配置容器内部接口地址
+	// 比如容器 IP 是 192.168.1.2，而网络的网段是 192.168.1.0/24
+	// 那么这里产出的 IP 字符串就是 192.168.1.2/24，用于容器内 Veth 端点配置
 	interfaceIP := *ep.Network.IpRange
 	interfaceIP.IP = ep.IPAddress
-
+	// 调用 setInterfaceIP 函数设置容器内 Veth 端点的 IP
 	if err = setInterfaceIP(ep.Device.PeerName, interfaceIP.String()); err != nil {
 		return fmt.Errorf("%v,%s", ep.Network, err)
 	}
-
+	// 启动容器内的 Veth 端点
 	if err = setInterfaceUP(ep.Device.PeerName); err != nil {
 		return err
 	}
-
+	// Ne Namespace 中默认本地地址 127.0.0.1 的"lo"网卡是关闭状态的
+	// 启动它以保证容器访问自己的请求
 	if err = setInterfaceUP("lo"); err != nil {
 		return err
 	}
-
+	// 设置容器内的外部请求都通过容器内的 Veth 端点访问
+	// 0.0.0.0/0 的网段，表示所有的 IP 地址段
 	_, cidr, _ := net.ParseCIDR("0.0.0.0/0")
-
+	// 构建要添加的路由数据，包括网络设备、网关 IP 及目的网段
+	// 相当于 route add -net 0.0.0.0/0 gw {Bridge网桥地址} dev {容器内的Veth端点设备}
 	defaultRoute := &netlink.Route{
 		LinkIndex: peerLink.Attrs().Index,
 		Gw:        ep.Network.IpRange.IP,
 		Dst:       cidr,
 	}
-
+	// 调用 netlink 的 RouteAdd 添加路由到容器的网络空间
+	// RouteAdd 函数相当于 route add命令
 	if err = netlink.RouteAdd(defaultRoute); err != nil {
 		return err
 	}
@@ -272,17 +303,21 @@ func configEndpointIpAddressAndRoute(ep *Endpoint, cinfo *container.Info) error 
 }
 
 // 配置容器到宿主机的端口映射，
-func configPortMapping(ep *Endpoint, cinfo *container.Info) error {
+func configPortMapping(ep *Endpoint, _ *container.Info) error {
+	// 遍历容器端口映射列表
 	for _, pm := range ep.PortMapping {
+		// 分割成宿主机的端口和容器的端口
 		portMapping := strings.Split(pm, ":")
 		if len(portMapping) != 2 {
 			logrus.Errorf("port mapping format error, %v", pm)
 			continue
 		}
+		// 由于 iptables 没有 Go 语言版本的实现，所以采用 exec.Command 的方式直接调用命令配置
+		// 在 iptables 的 PREROUTING 中添加 DNAT 规则，将宿主机的端口请求转发到容器的地址和端口上
 		iptablesCmd := fmt.Sprintf("-t nat -A PREROUTING -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s",
 			portMapping[0], ep.IPAddress.String(), portMapping[1])
 		cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
-		// err := cmd.Run()
+		// 执行 iptables 命令，添加端口映射转发规则
 		output, err := cmd.Output()
 		if err != nil {
 			logrus.Errorf("iptables Output, %v", output)
@@ -292,8 +327,9 @@ func configPortMapping(ep *Endpoint, cinfo *container.Info) error {
 	return nil
 }
 
-func Connect(networkName string, cinfo *container.Info) error {
-	// 从 networks 字典中取到容器连接的网络的信息， networks 字典中保存了当前己经创建的网络
+// 连楼容2带到之前创建的网络 ydocker run net testnet -p 8080:80 xxxx
+func Connect(networkName string, cInfo *container.Info) error {
+	// 从 networks 字典中取到容器连接的网络的信息，如果找不到网络则返回错误
 	network, ok := networks[networkName]
 	if !ok {
 		return fmt.Errorf("no Such Network: %s", networkName)
@@ -305,23 +341,23 @@ func Connect(networkName string, cinfo *container.Info) error {
 		return err
 	}
 
-	// 创建网络端点
+	// 创建网络端点，设置网络端点的 IP、网络和端口映射信息
 	ep := &Endpoint{
-		ID:          fmt.Sprintf("%s-%s", cinfo.Id, networkName),
+		ID:          fmt.Sprintf("%s-%s", cInfo.Id, networkName),
 		IPAddress:   ip,
 		Network:     network,
-		PortMapping: cinfo.PortMapping,
+		PortMapping: cInfo.PortMapping,
 	}
 	// 调用网络驱动挂载和配置网络端点
 	if err = drivers[network.Driver].Connect(network, ep); err != nil {
 		return err
 	}
 	// 到容器的 namespace 配置容器网络设备 IP 地址
-	if err = configEndpointIpAddressAndRoute(ep, cinfo); err != nil {
+	if err = configEndpointIpAddressAndRoute(ep, cInfo); err != nil {
 		return err
 	}
 	// 配置容器到宿主机的端口映射
-	return configPortMapping(ep, cinfo)
+	return configPortMapping(ep, cInfo)
 }
 
 func Disconnect(networkName string, cinfo *container.Info) error {

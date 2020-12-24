@@ -52,26 +52,36 @@ func (d *BridgeNetworkDriver) Delete(network Network) error {
 	return netlink.LinkDel(br)
 }
 
+// 连接一个网络和网络端点
 func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
+	// 获取网络名，即 Linux Bridge 的接口名
 	bridgeName := network.Name
+	// 通过接口名获取到 Linux Bridge 接口的对象和接口属性
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
 		return err
 	}
 
+	// 创建 Veth 接口的配置
 	la := netlink.NewLinkAttrs()
+	// 由于Linux接口名的限制，名字取 endpointId 的前5位
 	la.Name = endpoint.ID[:5]
+	// 通过设置 Veth 接口的 master 属性，设置这个 Veth 的一端挂载到网络对应的 Linux Bridge 上
 	la.MasterIndex = br.Attrs().Index
-
+	// 创建 Veth 对象，通过 PeerName 配置 Veth 另外一端的接口名
+	// 配置 Veth 另外一端的名字 cif-{endpointId 的前5位}
 	endpoint.Device = netlink.Veth{
 		LinkAttrs: la,
 		PeerName:  "cif-" + endpoint.ID[:5],
 	}
-
+	// 调用 netlink 的 LinkAdd 方法创建出这个 Veth 接口
+	// 因为上面指定了 link 的 MasterIndex 是网络对应的 Linux Bridge
+	// 所以 Veth 的一端就己经挂载到了网络对应的 Linux Bridge 上
 	if err = netlink.LinkAdd(&endpoint.Device); err != nil {
 		return fmt.Errorf("error Add Endpoint Device: %v", err)
 	}
-
+	// 调用 netlink 的 LinkSetUp 方法，设置 Veth 启动
+	// 相当于 ip link set xxx up命令
 	if err = netlink.LinkSetUp(&endpoint.Device); err != nil {
 		return fmt.Errorf("Error Add Endpoint Device: %v", err)
 	}
