@@ -15,10 +15,10 @@ func TestAllocate(t *testing.T) {
 	ip, err := ipAllocatorTest.Allocate(ipNet)
 	t.Logf("alloc ip: %v", ip)
 	if err != nil || ip == nil {
-		t.Fail()
+		t.FailNow()
 	}
-	if ip != nil && ip.String() != "192.168.0.1" {
-		t.Fail()
+	if ip.String() != "192.168.0.1" {
+		t.FailNow()
 	}
 }
 
@@ -27,6 +27,6 @@ func TestRelease(t *testing.T) {
 	ip, ipNet, _ := net.ParseCIDR("192.168.0.1/24")
 	err := ipAllocatorTest.Release(ipNet, &ip)
 	if err != nil {
-		t.Failed()
+		t.FailNow()
 	}
 }

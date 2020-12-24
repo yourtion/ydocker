@@ -226,10 +226,10 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.Info) func() {
 		logrus.Errorf("error set netns, %v", err)
 	}
 	return func() {
-		netns.Set(origns)
-		origns.Close()
+		_ = netns.Set(origns)
+		_ = origns.Close()
 		runtime.UnlockOSThread()
-		f.Close()
+		_ = f.Close()
 	}
 }
 
