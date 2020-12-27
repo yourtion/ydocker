@@ -32,7 +32,8 @@ $ sh run_test_network.sh
 ## TODO
 
 - [ ] volume 参数支持多个
-- [ ] 支持自定义运行路径（当前为 /root ）
+- [ ] 支持自定义运行路径（当前为`/root`）
 - [ ] 数据文件存取加锁
 - [ ] 清理 iptables 中的 portMapping 配置
 - [ ] 检测已经存在的 port 冲突
+- [ ] 实现 image 相关功能
